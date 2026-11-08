@@ -6,13 +6,13 @@
 
 ## Запуск
 
-## Создаём .env и настраиваем под себя
+### Создаём .env и настраиваем под себя
 
 ```bash
 cp .env.example .env
 ```
 
-## Создаём config/printers.yaml и настраиваем под себя
+### Создаём config/printers.yaml и настраиваем под себя
 
 ```bash
 cp config/printers.yaml.example config/printers.yaml
@@ -29,6 +29,30 @@ make vpn-bypass-docker
 ```
 
 Для проверки работоспособности:
+
 ```bash
 make check-printer
+```
+
+## Разработка
+
+### Установка uv
+
+```bash
+wget -qO- https://astral.sh/uv/install.sh | sh
+Перезапустить терминал (или ввести одну из команд, которые предложит установщик)
+uv venv --python 3.10
+source .venv/bin/activate
+```
+
+### Установка pre-commit
+
+```bash
+make pre-commit-install
+```
+
+### Запуск pre-commit
+
+```bash
+make pre-commit
 ```

@@ -67,14 +67,14 @@ if [ -f "$YAML_FILE" ]; then
     current_name=""
     while IFS= read -r line; do
         # Поиск имени принтера: - name: "printer-1"
-        if [[ "$line" =~ ^[[:space:]]*-[[:space:]]*name:[[:space:]]*[\"\']?([^\"\'[:space:]]+) ]]; then
+        if [[ $line =~ ^[[:space:]]*-[[:space:]]*name:[[:space:]]*[\"\']?([^\"\'[:space:]]+) ]]; then
             current_name="${BASH_REMATCH[1]}"
-        elif [[ "$line" =~ ^[[:space:]]*name:[[:space:]]*[\"\']?([^\"\'[:space:]]+) ]]; then
+        elif [[ $line =~ ^[[:space:]]*name:[[:space:]]*[\"\']?([^\"\'[:space:]]+) ]]; then
             current_name="${BASH_REMATCH[1]}"
         fi
 
         # Поиск хоста: host: "http://192.168.0.xxx"
-        if [[ "$line" =~ ^[[:space:]]*host:[[:space:]]*[\"\']?([^\"\'[:space:]]+) ]]; then
+        if [[ $line =~ ^[[:space:]]*host:[[:space:]]*[\"\']?([^\"\'[:space:]]+) ]]; then
             raw_host="${BASH_REMATCH[1]}"
             clean_host=$(echo "$raw_host" | sed -E 's|^https?://||; s|:[0-9]+/?$||; s|/.*$||' | tr -d ' "\r\n')
             p_name="${current_name:-printer}"
@@ -96,8 +96,8 @@ for name in "${!PRINTERS_MAP[@]}"; do
     target_ip="$host"
 
     # Если host не IPv4, пробуем разрешить DNS
-    if ! [[ "$host" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-        resolved_ip=$(getent ahostsv4 "$host" 2>/dev/null | awk '{print $1}' | head -n1 || true)
+    if ! [[ $host =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        resolved_ip=$(getent ahostsv4 "$host" 2> /dev/null | awk '{print $1}' | head -n1 || true)
         if [ -n "$resolved_ip" ]; then
             target_ip="$resolved_ip"
             echo -e "  [${name}] Разрешён хост ${host} -> ${target_ip}"
@@ -114,7 +114,7 @@ if ip route show table 2022 > /dev/null 2>&1; then
         if ! ip route show table 2022 | grep -q "172.16.0.0/12"; then
             echo -e "\n${CYAN}--- Синхронизация Docker с таблицей VPN 2022 ---${NC}"
             echo -e "  ${YELLOW}+${NC} Добавление маршрута 172.16.0.0/12 в таблицу VPN 2022"
-            ip route add 172.16.0.0/12 dev docker0 table 2022 2>/dev/null || true
+            ip route add 172.16.0.0/12 dev docker0 table 2022 2> /dev/null || true
         fi
     fi
 fi
@@ -126,13 +126,13 @@ ALL_OK=true
 for name in "${!PRINTERS_MAP[@]}"; do
     host="${PRINTERS_MAP[$name]}"
     target_ip="$host"
-    if ! [[ "$host" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-        resolved_ip=$(getent ahostsv4 "$host" 2>/dev/null | awk '{print $1}' | head -n1 || true)
+    if ! [[ $host =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        resolved_ip=$(getent ahostsv4 "$host" 2> /dev/null | awk '{print $1}' | head -n1 || true)
         [ -n "$resolved_ip" ] && target_ip="$resolved_ip"
     fi
 
     route_out=$(ip route get "$target_ip" 2>&1 || true)
-    
+
     if echo "$route_out" | grep -q "dev tun"; then
         echo -e "  ${RED}✗ [${name}] ${target_ip}${NC} -> ${route_out}"
         echo -e "    ${RED}ОШИБКА: Трафик идёт в VPN-туннель (tun)!${NC}"

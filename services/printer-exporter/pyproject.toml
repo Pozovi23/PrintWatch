@@ -1,0 +1,20 @@
+[project]
+name = "printer-exporter"
+version = "1.0.0"
+description = "Prometheus exporter for Moonraker / Klipper 3D printers"
+requires-python = ">=3.11"
+dependencies = [
+    "prometheus-client>=0.21.1",
+    "requests>=2.32.3",
+    "urllib3>=2.3.0",
+    "pydantic>=2.10.6",
+    "pydantic-settings>=2.8.1",
+    "python-json-logger>=3.2.1",
+    "PyYAML>=6.0.2",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=8.3.5",
+    "requests-mock>=1.12.1",
+]

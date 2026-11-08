@@ -6,13 +6,13 @@
 
 ## Запуск
 
-## Создаём .env и настраиваем под себя
+### Создаём .env и настраиваем под себя
 
 ```bash
 cp .env.example .env
 ```
 
-## Создаём config/printers.yaml и настраиваем под себя
+### Создаём config/printers.yaml и настраиваем под себя
 
 ```bash
 cp config/printers.yaml.example config/printers.yaml
@@ -29,6 +29,58 @@ make vpn-bypass-docker
 ```
 
 Для проверки работоспособности:
+
 ```bash
 make check-printer
+```
+
+## Разработка
+
+### Установка uv
+
+```bash
+wget -qO- https://astral.sh/uv/install.sh | sh
+# Перезапустить терминал (или ввести одну из команд, которые предложит установщик)
+uv venv --python 3.11
+source .venv/bin/activate
+```
+
+### Установка pre-commit
+
+```bash
+make pre-commit-install
+```
+
+### Запуск pre-commit
+
+```bash
+make pre-commit
+```
+
+### Тестирование экспортёра
+
+#### Модульные тесты (Unit tests с моками)
+
+Запуск набора тестов в изоляции (без физического принтера):
+
+```bash
+make test
+# или напрямую:
+PYTHONPATH="" uv run pytest -v -m "not live" services/printer-exporter/tests
+```
+
+*Проверяются сценарии:*
+
+- Успешный сбор телеметрии Moonraker (температуры сопла/стола, статус печати, расчет времени).
+- Обработка сетевого таймаута (`timeout`), ошибок Moonraker (HTTP 500 / 5xx) и повреждённого JSON.
+- Аварийные состояния Klippy (`shutdown` / `disconnected`).
+- Регистрация и корректное обновление метрик Prometheus (`MultiPrinterCollector`).
+- Параллельный сбор телеметрии с N принтеров.
+
+#### Интеграционные тесты живых принтеров
+
+Для проверки подключения к физическому оборудованию из `config/printers.yaml`:
+
+```bash
+make test-live
 ```

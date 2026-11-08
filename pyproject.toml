@@ -1,0 +1,37 @@
+[project]
+name = "printwatch"
+version = "1.0.0"
+description = "Observability and monitoring stack for 3D printer fleet (Klipper / Moonraker)"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [{ name = "Gleb" }]
+dependencies = []
+
+[tool.uv.workspace]
+members = [
+    "services/printer-exporter",
+    "services/camera-proxy",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.5",
+    "requests-mock>=1.12.1",
+    "pre-commit>=4.0.0",
+    "ruff>=0.11.0",
+]
+
+[tool.pytest.ini_options]
+markers = [
+    "live: integration tests connecting to physical 3D printers from config/printers.yaml",
+]
+testpaths = ["services/printer-exporter/tests"]
+pythonpath = ["services/printer-exporter"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.pyright]
+venvPath = "."
+venv = ".venv"

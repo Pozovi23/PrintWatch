@@ -11,7 +11,7 @@ PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 YAML_FILE="${PROJECT_ROOT}/config/printers.yaml"
 
 if [ ! -f "$YAML_FILE" ]; then
-    echo "❌ Ошибка: Файл конфигурации ${YAML_FILE} не найден!" >&2
+    echo "Ошибка: Файл конфигурации ${YAML_FILE} не найден!" >&2
     echo "   Создайте его на основе примера:" >&2
     echo "   cp config/printers.yaml.example config/printers.yaml" >&2
     exit 1
@@ -46,7 +46,7 @@ if [ -f "$YAML_FILE" ]; then
 fi
 
 if [ ${#PRINTERS_MAP[@]} -eq 0 ]; then
-    echo "❌ Ошибка: В файле ${YAML_FILE} не найдено ни одного принтера с полем 'host'." >&2
+    echo "Ошибка: В файле ${YAML_FILE} не найдено ни одного принтера с полем 'host'." >&2
     exit 1
 fi
 
@@ -54,7 +54,7 @@ for name in "${!PRINTERS_MAP[@]}"; do
     host="${PRINTERS_MAP[$name]}"
     echo ""
     echo "----------------------------------------------------------------------"
-    echo "🔍 Проверка принтера: ${name} (Хост: ${host})"
+    echo "Проверка принтера: ${name} (Хост: ${host})"
     echo "----------------------------------------------------------------------"
 
     # [1] Проверка маршрута ядра
@@ -62,28 +62,28 @@ for name in "${!PRINTERS_MAP[@]}"; do
     route_out=$(ip route get "$host" 2>&1 || true)
     echo "      ${route_out}"
     if echo "$route_out" | grep -q "dev tun"; then
-        echo "      ⚠️  ВНИМАНИЕ: Трафик идёт в VPN-туннель! Выполните 'make vpn-bypass-docker'."
+        echo "      ВНИМАНИЕ: Трафик идёт в VPN-туннель! Выполните 'make vpn-bypass-docker'."
     else
-        echo "      ✓ Маршрут корректен (напрямую в LAN мимо VPN)."
+        echo "      Маршрут корректен (напрямую в LAN мимо VPN)."
     fi
 
     # [2] Проверка ICMP Ping
     echo "[2/4] Проверка ICMP Ping:"
     if ping -c 1 -W 2 "$host" > /dev/null 2>&1; then
-        echo "      ✓ Ping успешен (устройство отвечает на ICMP)."
+        echo "      Ping успешен (устройство отвечает на ICMP)."
     else
-        echo "      ⚠️  Ping не прошёл (устройство выключено, другой IP или ICMP заблокирован)."
+        echo "      Ping не прошёл (устройство выключено, другой IP или ICMP заблокирован)."
     fi
 
     # [3] Проверка Moonraker API
     echo "[3/4] Проверка Moonraker API (http://${host}/server/info):"
     http_code=$(curl -s -o /dev/null -w "%{http_code}" -m 3 "http://${host}/server/info" 2> /dev/null) || http_code="000"
     if [ "$http_code" = "200" ]; then
-        echo "      ✓ Moonraker API доступен! (HTTP 200 OK)"
+        echo "      Moonraker API доступен! (HTTP 200 OK)"
     elif [ "$http_code" = "000" ] || [ -z "$http_code" ]; then
-        echo "      ⚠️  Таймаут подключения (трафик уходит в VPN tun0 либо принтер не отвечает)."
+        echo "      Таймаут подключения (трафик уходит в VPN tun0 либо принтер не отвечает)."
     else
-        echo "      ℹ️  Сервер ответил с кодом HTTP ${http_code}"
+        echo "      Сервер ответил с кодом HTTP ${http_code}"
     fi
 
     # [4] Проверка изнутри контейнера экспортёра
@@ -93,12 +93,12 @@ for name in "${!PRINTERS_MAP[@]}"; do
     if docker ps --format '{{.Names}}' | grep -q "^${container_name}$"; then
         container_code=$(docker exec "$container_name" curl -s -o /dev/null -w "%{http_code}" -m 3 "http://${host}/server/info" 2> /dev/null || echo "FAIL")
         if [ "$container_code" = "200" ]; then
-            echo "      ✓ Из контейнера ${container_name} API доступен (HTTP 200)!"
+            echo "      Из контейнера ${container_name} API доступен (HTTP 200)!"
         else
-            echo "      ⚠️  Из контейнера ${container_name} ответ: ${container_code}"
+            echo "      Из контейнера ${container_name} ответ: ${container_code}"
         fi
     else
-        echo "      ℹ️  Контейнер ${container_name} не запущен (запустите через 'make up')."
+        echo "      Контейнер ${container_name} не запущен (запустите через 'make up')."
     fi
 done
 

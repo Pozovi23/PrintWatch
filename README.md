@@ -59,7 +59,7 @@ make pre-commit
 
 ### Тестирование экспортёра
 
-#### Модульные тесты (Unit tests с моками)
+#### Модульные тесты
 
 Запуск набора тестов в изоляции (без физического принтера):
 
@@ -85,7 +85,7 @@ PYTHONPATH="" uv run pytest -v -m "not live" services/printer-exporter/tests
 make test-live
 ```
 
-### Тестирование прокси веб-камер (Camera Proxy)
+### Тестирование прокси веб-камер
 
 Локальный запуск сервиса трансляции видеопотоков:
 
@@ -95,7 +95,7 @@ uv run uvicorn app:app --app-dir services/camera-proxy --port 8080
 
 *Проверка эндпоинтов:*
 
-- **Проверка здоровья (Healthcheck):**
+- **Проверка здоровья:**
   ```bash
   curl http://localhost:8080/healthz
   ```

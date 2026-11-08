@@ -1,0 +1,164 @@
+---
+services:
+  # ============================================================================
+  # 1. Prometheus - сбор метрик и оценка правил алертинга
+  # ============================================================================
+  prometheus:
+    image: prom/prometheus:v3.2.1
+    container_name: prometheus
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=15d
+      - --web.console.libraries=/usr/share/prometheus/console_libraries
+      - --web.console.templates=/usr/share/prometheus/consoles
+      - --web.enable-lifecycle
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./alerts/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus-data:/prometheus
+    ports: [9090:9090]
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - wget -q --tries=1 --spider http://localhost:9090/-/healthy || exit 1
+      interval: 15s
+      timeout: 3s
+      retries: 3
+    networks:
+      - monitoring
+
+  # ============================================================================
+  # 2. Alertmanager - маршрутизация уведомлений в Telegram
+  # ============================================================================
+  alertmanager:
+    image: prom/alertmanager:v0.28.1
+    container_name: alertmanager
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+      - --web.enable-lifecycle
+    volumes:
+      - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager-data:/alertmanager
+    ports: [9093:9093]
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - wget -q --tries=1 --spider http://localhost:9093/-/healthy || exit 1
+      interval: 15s
+      timeout: 3s
+      retries: 3
+    networks:
+      - monitoring
+
+  # ============================================================================
+  # 3. Grafana - дашборды и визуализация для N принтеров
+  # ============================================================================
+  grafana:
+    image: grafana/grafana:11.5.2
+    container_name: grafana
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+      - GF_PANELS_DISABLE_SANITIZE_HTML=true
+      - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/var/lib/grafana/dashboards/3d-printers.json
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports: [3000:3000]
+    healthcheck:
+      test: [CMD-SHELL, curl -f http://localhost:3000/api/health || exit 1]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    networks:
+      - monitoring
+
+  # ============================================================================
+  # 4. Node Exporter - метрики хоста (Ubuntu)
+  # ============================================================================
+  node-exporter:
+    image: prom/node-exporter:v1.9.0
+    container_name: node-exporter
+    restart: unless-stopped
+    command:
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --path.rootfs=/rootfs
+      - --collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)
+    volumes: [/proc:/host/proc:ro, /sys:/host/sys:ro, /:/rootfs:ro]
+    ports: [9100:9100]
+    networks:
+      - monitoring
+
+  # ============================================================================
+  # 5. Printer Exporter (Единый сервис сбора метрик для N принтеров)
+  # Конфигурация и интервал опроса загружаются из config/printers.yaml
+  # ============================================================================
+  printer-exporter:
+    build:
+      context: .
+      dockerfile: services/printer-exporter/Dockerfile
+    container_name: printer-exporter
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+    environment: [EXPORTER_PORT=9108, EXPORTER_LOG_LEVEL=INFO]
+    volumes: [./config:/app/config:ro]
+    ports: [9108:9108]
+    healthcheck:
+      test: [CMD-SHELL, curl -f http://localhost:9108/healthz || exit 1]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+    networks:
+      - monitoring
+
+  # ============================================================================
+  # 6. Camera Proxy - проксирование MJPEG-потоков для N веб-камер
+  # ============================================================================
+  camera-proxy:
+    build:
+      context: .
+      dockerfile: services/camera-proxy/Dockerfile
+    container_name: camera-proxy
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+    volumes: [./config:/app/config:ro]
+    ports: [8080:8080]
+    healthcheck:
+      test: [CMD-SHELL, curl -f http://localhost:8080/healthz || exit 1]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+    networks: [monitoring]
+volumes:
+  prometheus-data:
+    name: printwatch-prometheus-data
+  alertmanager-data:
+    name: printwatch-alertmanager-data
+  grafana-data:
+    name: printwatch-grafana-data
+networks:
+  monitoring:
+    name: printwatch-network
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.28.0.0/16
+          gateway: 172.28.0.1

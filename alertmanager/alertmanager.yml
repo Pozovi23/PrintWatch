@@ -1,0 +1,31 @@
+---
+# Alertmanager configuration with Telegram routing
+global:
+  resolve_timeout: 5m
+# Default routing tree
+route:
+  group_by: [alertname, printer]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  receiver: telegram-notifications
+receivers:
+  - name: telegram-notifications
+    telegram_configs:
+      # Замените bot_token и chat_id на свои реальные данные из Telegram (@BotFather и @userinfobot)
+      # Значения можно задать прямо здесь или передать через envsubst
+      - bot_token: REPLACE_WITH_YOUR_TELEGRAM_BOT_TOKEN
+        chat_id: 123456789
+        send_resolved: true
+        parse_mode: HTML
+        message: >-
+          {{ if eq .Status "firing" }}🔥 <b>ВНИМАНИЕ:
+          {{ .CommonAnnotations.summary }}</b>{{ else }}✅ <b>ВОССТАНОВЛЕНО:
+          {{ .CommonAnnotations.summary }}</b>{{ end }}
+          <b>Критичность:</b> <code>{{ .CommonLabels.severity }}</code>
+          {{ if .CommonLabels.printer }}<b>Принтер:</b> <code>{{ .CommonLabels.printer }}</code>{{
+          end }}
+          {{ if .CommonLabels.instance }}<b>Инстанс:</b> <code>{{ .CommonLabels.instance }}</code>{{
+          end }}
+          <b>Описание:</b> {{ .CommonAnnotations.description }}
+          <b>Время:</b> {{ .StartsAt.Format "2006-01-02 15:04:05 UTC" }}

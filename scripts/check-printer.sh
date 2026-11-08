@@ -58,7 +58,7 @@ for name in "${!PRINTERS_MAP[@]}"; do
     echo "----------------------------------------------------------------------"
 
     # [1] Проверка маршрута ядра
-    echo "[1/3] Маршрут ядра Linux (ip route get):"
+    echo "[1/4] Маршрут ядра Linux (ip route get):"
     route_out=$(ip route get "$host" 2>&1 || true)
     echo "      ${route_out}"
     if echo "$route_out" | grep -q "dev tun"; then
@@ -68,7 +68,7 @@ for name in "${!PRINTERS_MAP[@]}"; do
     fi
 
     # [2] Проверка ICMP Ping
-    echo "[2/3] Проверка ICMP Ping:"
+    echo "[2/4] Проверка ICMP Ping:"
     if ping -c 1 -W 2 "$host" > /dev/null 2>&1; then
         echo "      ✓ Ping успешен (устройство отвечает на ICMP)."
     else
@@ -76,7 +76,7 @@ for name in "${!PRINTERS_MAP[@]}"; do
     fi
 
     # [3] Проверка Moonraker API
-    echo "[3/3] Проверка Moonraker API (http://${host}/server/info):"
+    echo "[3/4] Проверка Moonraker API (http://${host}/server/info):"
     http_code=$(curl -s -o /dev/null -w "%{http_code}" -m 3 "http://${host}/server/info" 2> /dev/null) || http_code="000"
     if [ "$http_code" = "200" ]; then
         echo "      ✓ Moonraker API доступен! (HTTP 200 OK)"
@@ -84,6 +84,21 @@ for name in "${!PRINTERS_MAP[@]}"; do
         echo "      ⚠️  Таймаут подключения (трафик уходит в VPN tun0 либо принтер не отвечает)."
     else
         echo "      ℹ️  Сервер ответил с кодом HTTP ${http_code}"
+    fi
+
+    # [4] Проверка изнутри контейнера экспортёра
+    echo "[4/4] Проверка изнутри контейнера printer-exporter:"
+    container_name="printer-exporter"
+
+    if docker ps --format '{{.Names}}' | grep -q "^${container_name}$"; then
+        container_code=$(docker exec "$container_name" curl -s -o /dev/null -w "%{http_code}" -m 3 "http://${host}/server/info" 2> /dev/null || echo "FAIL")
+        if [ "$container_code" = "200" ]; then
+            echo "      ✓ Из контейнера ${container_name} API доступен (HTTP 200)!"
+        else
+            echo "      ⚠️  Из контейнера ${container_name} ответ: ${container_code}"
+        fi
+    else
+        echo "      ℹ️  Контейнер ${container_name} не запущен (запустите через 'make up')."
     fi
 done
 

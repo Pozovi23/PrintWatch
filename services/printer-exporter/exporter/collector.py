@@ -52,24 +52,38 @@ class TelemetryCollector:
                 1 if st == active_state else 0,
             )
 
-        # 3. Температуры
-        self.metrics.printer_temperature_celsius.labels(
-            printer=self.printer_name,
-            tool="extruder",
-        ).set(telemetry.extruder_temp)
-        self.metrics.printer_temperature_celsius.labels(
-            printer=self.printer_name,
-            tool="bed",
-        ).set(telemetry.bed_temp)
+        # 3. Температуры (поддержка динамически обнаруженных датчиков и обратная совместимость)
+        if telemetry.temperatures:
+            for tool_name, temp_val in telemetry.temperatures.items():
+                self.metrics.printer_temperature_celsius.labels(
+                    printer=self.printer_name,
+                    tool=tool_name,
+                ).set(temp_val)
+        else:
+            self.metrics.printer_temperature_celsius.labels(
+                printer=self.printer_name,
+                tool="extruder",
+            ).set(telemetry.extruder_temp)
+            self.metrics.printer_temperature_celsius.labels(
+                printer=self.printer_name,
+                tool="bed",
+            ).set(telemetry.bed_temp)
 
-        self.metrics.printer_temperature_target_celsius.labels(
-            printer=self.printer_name,
-            tool="extruder",
-        ).set(telemetry.extruder_target)
-        self.metrics.printer_temperature_target_celsius.labels(
-            printer=self.printer_name,
-            tool="bed",
-        ).set(telemetry.bed_target)
+        if telemetry.temperature_targets:
+            for tool_name, target_val in telemetry.temperature_targets.items():
+                self.metrics.printer_temperature_target_celsius.labels(
+                    printer=self.printer_name,
+                    tool=tool_name,
+                ).set(target_val)
+        else:
+            self.metrics.printer_temperature_target_celsius.labels(
+                printer=self.printer_name,
+                tool="extruder",
+            ).set(telemetry.extruder_target)
+            self.metrics.printer_temperature_target_celsius.labels(
+                printer=self.printer_name,
+                tool="bed",
+            ).set(telemetry.bed_target)
 
         # 4. Прогресс и время печати
         self.metrics.printer_print_progress_ratio.labels(

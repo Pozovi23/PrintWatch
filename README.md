@@ -109,3 +109,40 @@ uv run uvicorn app:app --app-dir services/camera-proxy --port 8080
   ```
 - **Веб-витрина со стримами в реальном времени:**
   Открыть в браузере `http://localhost:8080/camera` для просмотра живого MJPEG-видеопотока.
+
+### Тестирование Grafana и дашбордов
+
+Запуск Grafana и Prometheus (или всего стека через `make up`):
+
+```bash
+docker compose up -d grafana prometheus
+```
+
+*Проверка в веб-интерфейсе:*
+
+- Открыть в браузере: `http://localhost:3000`
+- Вход настроен анонимно с ролью `Viewer` (учётные данные администратора: `admin` / `admin`).
+- Стартовой страницей автоматически открывается дашборд `3D Printers & Host Monitoring`.
+- В выпадающем списке `$printer` доступен выбор принтера (`printer-1`, `All`).
+- Отображаются графики температур сопоставления факта и таргета, сводная таблица принтеров и системные метрики хоста.
+
+*Проверка через API (валидация Provisioning):*
+
+- **Проверка здоровья сервиса:**
+  ```bash
+  curl -s http://localhost:3000/api/health
+  ```
+- **Проверка автоматической регистрации Prometheus:**
+  ```bash
+  curl -s -u admin:admin http://localhost:3000/api/datasources
+  ```
+- **Проверка зарегистрированного дашборда:**
+  ```bash
+  curl -s -u admin:admin http://localhost:3000/api/search
+  ```
+
+*Остановка контейнеров:*
+
+```bash
+make down
+```

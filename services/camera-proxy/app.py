@@ -52,11 +52,27 @@ def load_cameras_from_yaml() -> dict[str, CameraInfo]:
 
 
 def resolve_camera(target: str) -> CameraInfo:
-    """Resolve camera by name or 1-based numeric index."""
+    """Resolve camera by name, 1-based numeric index, or fallback for all."""
     cameras = load_cameras_from_yaml()
 
     if target in cameras:
         return cameras[target]
+
+    # Strip Grafana variable formatting: e.g. {printer-1}
+    clean = target.strip("{}\"' ")
+    if clean in cameras:
+        return cameras[clean]
+
+    # Handle multi-value list from Grafana (e.g. printer-1,printer-2)
+    for part in clean.replace("|", ",").split(","):
+        part = part.strip()
+        if part in cameras:
+            return cameras[part]
+
+    # Fallback for $__all or empty
+    if target in ("$__all", "all", "All", "*", "") or target.startswith(("{", "$")):
+        if cameras:
+            return next(iter(cameras.values()))
 
     if target.isdigit():
         idx = int(target) - 1

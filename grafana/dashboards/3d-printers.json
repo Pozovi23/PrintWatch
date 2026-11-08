@@ -138,8 +138,9 @@
           },
           "editorMode": "code",
           "expr": "printer_up{printer=~\"$printer\"}",
+          "instant": true,
           "legendFormat": "{{printer}} Connection",
-          "range": true,
+          "range": false,
           "refId": "A"
         }
       ],
@@ -245,9 +246,10 @@
             "uid": "Prometheus"
           },
           "editorMode": "code",
-          "expr": "(printer_state{printer=~\"$printer\", state=\"printing\"} == 1) * 2 or (printer_state{printer=~\"$printer\", state=\"paused\"} == 1) * 3 or (printer_state{printer=~\"$printer\", state=\"error\"} == 1) * 4 or (printer_state{printer=~\"$printer\", state=\"idle\"} == 1) * 1 or (printer_up{printer=~\"$printer\"} == 0) * 0",
+          "expr": "max by (printer) ((printer_state{printer=~\"$printer\", state=\"printing\"} == 1) * 2 or (printer_state{printer=~\"$printer\", state=\"paused\"} == 1) * 3 or (printer_state{printer=~\"$printer\", state=\"error\"} == 1) * 4 or (printer_state{printer=~\"$printer\", state=\"idle\"} == 1) * 1 or (printer_up{printer=~\"$printer\"} == 0) * 0)",
+          "instant": true,
           "legendFormat": "{{printer}} State",
-          "range": true,
+          "range": false,
           "refId": "A"
         }
       ],
@@ -313,8 +315,9 @@
           },
           "editorMode": "code",
           "expr": "printer_print_progress_ratio{printer=~\"$printer\"} * 100",
+          "instant": true,
           "legendFormat": "{{printer}} Progress",
-          "range": true,
+          "range": false,
           "refId": "A"
         }
       ],
@@ -374,8 +377,9 @@
           },
           "editorMode": "code",
           "expr": "printer_print_time_left_seconds{printer=~\"$printer\"}",
+          "instant": true,
           "legendFormat": "{{printer}} ETA",
-          "range": true,
+          "range": false,
           "refId": "A"
         }
       ],
@@ -434,8 +438,9 @@
           },
           "editorMode": "code",
           "expr": "printer_info{printer=~\"$printer\"}",
+          "instant": true,
           "legendFormat": "{{printer}}: {{job_filename}} (v{{version}})",
-          "range": true,
+          "range": false,
           "refId": "A"
         }
       ],

@@ -1,4 +1,4 @@
-.PHONY: help vpn-bypass-docker check-printer test test-live test-all sync lock pre-commit-install pre-commit
+.PHONY: help up down restart logs status build add-printer vpn-bypass-docker check-printer test test-live test-all sync lock reload-prometheus pre-commit-install pre-commit
 
 SHELL := /bin/bash
 
@@ -7,6 +7,29 @@ help: ## Показать справку по командам
 	@echo "PrintWatch - Стенд мониторинга 3D-принтеров (Klipper / Moonraker)"
 	@echo "========================================================================"
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
+
+up: ## Запустить стек мониторинга (Prometheus, Grafana, Alertmanager, Exporter, Camera)
+	docker compose up -d
+
+down: ## Остановить и удалить контейнеры стека
+	docker compose down
+
+restart: ## Перезапустить все сервисы
+	docker compose restart
+
+logs: ## Просмотр логов в реальном времени (follow)
+	docker compose logs -f
+
+status: ## Статус и здоровье контейнеров
+	docker compose ps
+
+build: ## Собрать / пересобрать образы exporter и camera-proxy
+	docker compose build
+
+add-printer: ## Перезапустить экспортёр и применить добавленные в printers.yaml принтеры
+	@echo "==> Обновление конфигурации N принтеров..."
+	docker compose restart printer-exporter camera-proxy
+	@echo "✓ Экспортёр и прокси камер перезапущены с обновлённым списком принтеров!"
 
 vpn-bypass-docker: ## Добавить маршруты и ip rule для обхода VPN (LAN 192.168.0.0/16 и Docker 172.16.0.0/12)
 	@echo "==> Запуск скрипта обхода VPN для Docker и локальной сети..."
@@ -29,6 +52,9 @@ sync: ## Установить все зависимости и поднять в
 
 lock: ## Обновить файл блокировки uv.lock
 	uv lock
+
+reload-prometheus: ## Перезагрузить правила и конфигурацию Prometheus без перезапуска контейнера
+	curl -s -X POST http://localhost:9090/-/reload && echo "✓ Prometheus config reloaded"
 
 pre-commit-install: ## Установить pre-commit через uv и зарегистрировать git-хуки в репозитории
 	@echo "==> Установка pre-commit через uv..."

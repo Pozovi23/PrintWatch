@@ -99,4 +99,6 @@ jobs:
           tags: printwatch-camera-proxy:ci
       - name: Validate Docker Compose specification
         run: |-
+          cp -n alertmanager/alertmanager.yml.example alertmanager/alertmanager.yml || true
+          cp -n config/printers.yaml.example config/printers.yaml || true
           docker compose config --quiet

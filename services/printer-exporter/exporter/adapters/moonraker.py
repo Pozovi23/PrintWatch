@@ -3,6 +3,7 @@
 import logging
 import time
 from typing import Any
+from urllib.parse import quote
 import requests
 
 from exporter.adapters.base import BaseAdapter, PrinterTelemetry
@@ -19,6 +20,51 @@ class MoonrakerAdapter(BaseAdapter):
         if self.api_key:
             self.session.headers.update({"X-Api-Key": self.api_key})
         self.session.headers.update({"Accept": "application/json"})
+        self._temperature_objects: list[str] = []
+        self._last_discovery_time: float = 0.0
+
+    def discover_temperature_sensors(self) -> list[str]:
+        """Discover all temperature-capable objects from Klipper /printer/objects/list."""
+        try:
+            data, _ = self._get("/printer/objects/list")
+            all_objects = data.get("result", {}).get("objects", [])
+
+            sensors = []
+            for obj in all_objects:
+                lower_obj = obj.lower()
+                if (
+                    lower_obj.startswith("extruder")
+                    or lower_obj == "heater_bed"
+                    or lower_obj.startswith("heater_generic ")
+                    or lower_obj.startswith("temperature_sensor ")
+                    or lower_obj.startswith("temperature_fan ")
+                ):
+                    sensors.append(obj)
+
+            if sensors:
+                self._temperature_objects = sensors
+                self._last_discovery_time = time.time()
+                logger.info("Discovered %d temperature sensors for %s: %s", len(sensors), self.host, sensors)
+                return sensors
+        except Exception as exc:
+            logger.debug("Sensor discovery failed for %s: %s, using defaults", self.host, exc)
+
+        if not self._temperature_objects:
+            self._temperature_objects = ["extruder", "heater_bed"]
+        return self._temperature_objects
+
+    @staticmethod
+    def _format_tool_name(obj: str) -> str:
+        """Convert Klipper object name to a clean, readable tool label."""
+        if obj.startswith("temperature_sensor "):
+            return obj[len("temperature_sensor ") :].strip()
+        if obj.startswith("heater_generic "):
+            return obj[len("heater_generic ") :].strip()
+        if obj.startswith("temperature_fan "):
+            return obj[len("temperature_fan ") :].strip()
+        if obj == "heater_bed":
+            return "bed"
+        return obj
 
     def _get(self, path: str) -> tuple[dict[str, Any], float]:
         """Perform a GET request, returning parsed JSON and response time in seconds."""
@@ -66,8 +112,16 @@ class MoonrakerAdapter(BaseAdapter):
             except requests.exceptions.RequestException:
                 pass
 
-            # 2. Query objects
-            query_path = "/printer/objects/query?extruder&heater_bed&print_stats&display_status&virtual_sdcard"
+            # 2. Query objects (with dynamic discovery of temperature sensors)
+            if not self._temperature_objects or (time.time() - self._last_discovery_time) > 600:
+                self.discover_temperature_sensors()
+
+            query_objects = list(self._temperature_objects)
+            for std_obj in ("print_stats", "display_status", "virtual_sdcard"):
+                if std_obj not in query_objects:
+                    query_objects.append(std_obj)
+
+            query_path = "/printer/objects/query?" + "&".join(quote(s) for s in query_objects)
             data, lat_query = self._get(query_path)
             telemetry.endpoint_latencies["/printer/objects/query"] = lat_query
 
@@ -75,14 +129,30 @@ class MoonrakerAdapter(BaseAdapter):
 
             telemetry.is_up = True
 
-            # Extruder & Bed temperatures
-            extruder = status.get("extruder", {})
-            bed = status.get("heater_bed", {})
+            # Parse all discovered temperature sensors
+            for obj in self._temperature_objects:
+                obj_status = status.get(obj)
+                if not isinstance(obj_status, dict):
+                    continue
+                tool_name = self._format_tool_name(obj)
+                temp_val = obj_status.get("temperature")
+                if temp_val is not None:
+                    try:
+                        telemetry.temperatures[tool_name] = float(temp_val)
+                    except (ValueError, TypeError):
+                        pass
+                target_val = obj_status.get("target")
+                if target_val is not None:
+                    try:
+                        telemetry.temperature_targets[tool_name] = float(target_val)
+                    except (ValueError, TypeError):
+                        pass
 
-            telemetry.extruder_temp = float(extruder.get("temperature", 0.0) or 0.0)
-            telemetry.extruder_target = float(extruder.get("target", 0.0) or 0.0)
-            telemetry.bed_temp = float(bed.get("temperature", 0.0) or 0.0)
-            telemetry.bed_target = float(bed.get("target", 0.0) or 0.0)
+            # Backwards compatibility fields for extruder & bed
+            telemetry.extruder_temp = telemetry.temperatures.get("extruder", 0.0)
+            telemetry.extruder_target = telemetry.temperature_targets.get("extruder", 0.0)
+            telemetry.bed_temp = telemetry.temperatures.get("bed", 0.0)
+            telemetry.bed_target = telemetry.temperature_targets.get("bed", 0.0)
 
             # Print stats
             print_stats = status.get("print_stats", {})

@@ -147,3 +147,63 @@ def test_moonraker_klippy_shutdown(moonraker_adapter):
         telemetry = moonraker_adapter.fetch_telemetry()
         assert telemetry.is_up is True
         assert telemetry.state == "error"
+
+
+def test_moonraker_dynamic_sensor_discovery(moonraker_adapter):
+    """Test dynamic sensor discovery for CPU, MCU, Chamber and other heaters."""
+    import re
+
+    with requests_mock.Mocker() as m:
+        m.get(
+            f"{HOST}/server/info",
+            json={
+                "result": {
+                    "klippy_state": "ready",
+                    "klippy_connected": True,
+                    "moonraker_version": "v0.8.0",
+                },
+            },
+        )
+        m.get(
+            f"{HOST}/printer/objects/list",
+            json={
+                "result": {
+                    "objects": [
+                        "extruder",
+                        "heater_bed",
+                        "heater_generic chamber",
+                        "temperature_sensor CPU",
+                        "temperature_sensor Motherboard MCU",
+                        "webhooks",
+                        "gcode_move",
+                    ],
+                },
+            },
+        )
+        m.get(
+            re.compile(f"{HOST}/printer/objects/query.*"),
+            json={
+                "result": {
+                    "status": {
+                        "extruder": {"temperature": 215.0, "target": 215.0},
+                        "heater_bed": {"temperature": 60.0, "target": 60.0},
+                        "heater_generic chamber": {"temperature": 45.0, "target": 50.0},
+                        "temperature_sensor CPU": {"temperature": 52.3},
+                        "temperature_sensor Motherboard MCU": {"temperature": 38.1},
+                        "print_stats": {"state": "printing", "print_duration": 120.0},
+                    },
+                },
+            },
+        )
+
+        telemetry = moonraker_adapter.fetch_telemetry()
+
+        assert telemetry.is_up is True
+        assert telemetry.extruder_temp == 215.0
+        assert telemetry.bed_temp == 60.0
+        assert telemetry.temperatures["extruder"] == 215.0
+        assert telemetry.temperatures["bed"] == 60.0
+        assert telemetry.temperatures["chamber"] == 45.0
+        assert telemetry.temperatures["CPU"] == 52.3
+        assert telemetry.temperatures["Motherboard MCU"] == 38.1
+        assert telemetry.temperature_targets["chamber"] == 50.0

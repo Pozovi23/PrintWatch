@@ -16,6 +16,8 @@ class PrinterTelemetry:
     extruder_target: float = 0.0
     bed_temp: float = 0.0
     bed_target: float = 0.0
+    temperatures: dict[str, float] = field(default_factory=dict)
+    temperature_targets: dict[str, float] = field(default_factory=dict)
     progress_ratio: float = 0.0  # 0.0 to 1.0
     time_left_seconds: float = 0.0
     time_elapsed_seconds: float = 0.0

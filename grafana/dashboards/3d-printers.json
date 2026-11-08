@@ -481,7 +481,7 @@
           {
             "matcher": {
               "id": "byRegexp",
-              "options": ".*Extruder.*"
+              "options": "(?i).*extruder.*"
             },
             "properties": [
               {
@@ -496,7 +496,7 @@
           {
             "matcher": {
               "id": "byRegexp",
-              "options": ".*Bed.*"
+              "options": "(?i).*bed.*"
             },
             "properties": [
               {
@@ -537,23 +537,11 @@
             "uid": "Prometheus"
           },
           "editorMode": "code",
-          "expr": "printer_temperature_celsius{printer=~\"$printer\", tool=\"extruder\"}",
+          "expr": "printer_temperature_celsius{printer=~\"$printer\"}",
           "instant": false,
-          "legendFormat": "Extruder",
+          "legendFormat": "{{tool}}",
           "range": true,
           "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "Prometheus"
-          },
-          "editorMode": "code",
-          "expr": "printer_temperature_celsius{printer=~\"$printer\", tool=\"bed\"}",
-          "instant": false,
-          "legendFormat": "Bed",
-          "range": true,
-          "refId": "B"
         }
       ],
       "title": "Temperatures",

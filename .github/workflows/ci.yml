@@ -1,0 +1,102 @@
+---
+name: CI
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+jobs:
+  # --------------------------------------------------------------------------
+  # 1. Pre-commit проверки через uv (ruff, yamllint, shellcheck, formatting, etc.)
+  # --------------------------------------------------------------------------
+  pre-commit:
+    name: Pre-commit Hooks (via uv)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          version: latest
+      - name: Set up Python
+        run: uv python install 3.11
+      - name: Install dependencies via uv sync
+        run: uv sync --frozen --all-packages
+      - name: Cache pre-commit environments
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml')
+            }}
+          restore-keys: |
+            pre-commit-${{ runner.os }}-
+      - name: Install linter binaries (hadolint, shfmt, shellcheck)
+        run: |
+          sudo curl -fsSL --retry 5 --retry-delay 2 --retry-connrefused \
+            -o /usr/local/bin/hadolint \
+            https://github.com/hadolint/hadolint/releases/download/v2.12.0/hadolint-Linux-x86_64
+          sudo chmod +x /usr/local/bin/hadolint
+          sudo curl -fsSL --retry 5 --retry-delay 2 --retry-connrefused \
+            -o /usr/local/bin/shfmt \
+            https://github.com/mvdan/sh/releases/download/v3.10.0/shfmt_v3.10.0_linux_amd64
+          sudo chmod +x /usr/local/bin/shfmt
+          which shellcheck || (sudo apt-get update -y && sudo apt-get install -y shellcheck)
+      - name: Run all pre-commit hooks via Make
+        run: make pre-commit
+
+  # --------------------------------------------------------------------------
+  # 2. Модульные тесты экспортёра (Unit Tests с моками, без внешних принтеров)
+  # --------------------------------------------------------------------------
+  unit-tests:
+    name: Unit Tests (Python 3.11 via uv)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          version: latest
+      - name: Set up Python
+        run: uv python install 3.11
+      - name: Install dependencies via uv sync
+        run: uv sync --frozen --all-packages
+      - name: Run Unit Tests (mocked)
+        env:
+          PYTHONPATH: ''
+        run: |
+          # Исключаем маркер 'live' (реальное физическое оборудование на LAN недоступно в облаке GitHub Actions)
+          uv run pytest -v -m "not live" services/printer-exporter/tests
+
+  # --------------------------------------------------------------------------
+  # 3. Валидация сборки Docker-образов и Compose
+  # --------------------------------------------------------------------------
+  docker-build:
+    name: Docker Build Check
+    runs-on: ubuntu-latest
+    needs: [pre-commit, unit-tests]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build printer-exporter image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./services/printer-exporter/Dockerfile
+          push: false
+          tags: printwatch-printer-exporter:ci
+      - name: Build camera-proxy image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./services/camera-proxy/Dockerfile
+          push: false
+          tags: printwatch-camera-proxy:ci
+      - name: Validate Docker Compose specification
+        run: |-
+          docker compose config --quiet

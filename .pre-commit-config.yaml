@@ -54,20 +54,24 @@ repos:
     rev: 0.8.1
     hooks:
       - id: nbstripout
-  - repo: https://github.com/AleksaC/hadolint-py
-    rev: v2.12.1b3
+  - repo: https://github.com/hadolint/hadolint
+    rev: v2.12.0
     hooks:
       - id: hadolint
         args: [--failure-threshold, error]
-  - repo: https://github.com/shellcheck-py/shellcheck-py
-    rev: v0.10.0.1
+  - repo: local
     hooks:
       - id: shellcheck
+        name: shellcheck
+        entry: shellcheck
+        language: system
+        types: [shell]
         args: [--format, gcc]
-  - repo: https://github.com/scop/pre-commit-shfmt
-    rev: v3.12.0-2
-    hooks:
       - id: shfmt
+        name: shfmt
+        entry: shfmt
+        language: system
+        types: [shell]
         args: [--write, --indent, '4', --space-redirects, --simplify]
   - repo: https://github.com/commitizen-tools/commitizen
     rev: v4.7.0

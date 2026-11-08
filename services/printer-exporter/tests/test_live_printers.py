@@ -41,6 +41,7 @@ class TestLivePrinters:
         if printer.api_key:
             headers["X-Api-Key"] = printer.api_key.get_secret_value()
 
+        resp = None
         try:
             resp = requests.get(url, headers=headers, timeout=4.0)
         except requests.exceptions.RequestException as e:
@@ -50,6 +51,7 @@ class TestLivePrinters:
                 f"to ensure LAN traffic to {printer.host} bypasses the VPN tunnel!",
             )
 
+        assert resp is not None
         assert resp.status_code == 200, f"Expected 200 OK from {url}, got {resp.status_code}"
         data = resp.json()
         assert "result" in data, f"Missing 'result' block in Moonraker response from {url}"

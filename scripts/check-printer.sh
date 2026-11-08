@@ -27,13 +27,13 @@ declare -A PRINTERS_MAP=()
 if [ -f "$YAML_FILE" ]; then
     current_name=""
     while IFS= read -r line; do
-        if [[ "$line" =~ ^[[:space:]]*-[[:space:]]*name:[[:space:]]*[\"\']?([^\"\'[:space:]]+) ]]; then
+        if [[ $line =~ ^[[:space:]]*-[[:space:]]*name:[[:space:]]*[\"\']?([^\"\'[:space:]]+) ]]; then
             current_name="${BASH_REMATCH[1]}"
-        elif [[ "$line" =~ ^[[:space:]]*name:[[:space:]]*[\"\']?([^\"\'[:space:]]+) ]]; then
+        elif [[ $line =~ ^[[:space:]]*name:[[:space:]]*[\"\']?([^\"\'[:space:]]+) ]]; then
             current_name="${BASH_REMATCH[1]}"
         fi
 
-        if [[ "$line" =~ ^[[:space:]]*host:[[:space:]]*[\"\']?([^\"\'[:space:]]+) ]]; then
+        if [[ $line =~ ^[[:space:]]*host:[[:space:]]*[\"\']?([^\"\'[:space:]]+) ]]; then
             raw_host="${BASH_REMATCH[1]}"
             clean_host=$(echo "$raw_host" | sed -E 's|^https?://||; s|:[0-9]+/?$||; s|/.*$||' | tr -d ' "\r\n')
             p_name="${current_name:-printer}"
@@ -77,7 +77,7 @@ for name in "${!PRINTERS_MAP[@]}"; do
 
     # [3] Проверка Moonraker API
     echo "[3/3] Проверка Moonraker API (http://${host}/server/info):"
-    http_code=$(curl -s -o /dev/null -w "%{http_code}" -m 3 "http://${host}/server/info" 2>/dev/null) || http_code="000"
+    http_code=$(curl -s -o /dev/null -w "%{http_code}" -m 3 "http://${host}/server/info" 2> /dev/null) || http_code="000"
     if [ "$http_code" = "200" ]; then
         echo "      ✓ Moonraker API доступен! (HTTP 200 OK)"
     elif [ "$http_code" = "000" ] || [ -z "$http_code" ]; then

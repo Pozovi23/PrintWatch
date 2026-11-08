@@ -40,8 +40,8 @@ make check-printer
 
 ```bash
 wget -qO- https://astral.sh/uv/install.sh | sh
-Перезапустить терминал (или ввести одну из команд, которые предложит установщик)
-uv venv --python 3.10
+# Перезапустить терминал (или ввести одну из команд, которые предложит установщик)
+uv venv --python 3.11
 source .venv/bin/activate
 ```
 
@@ -56,3 +56,19 @@ make pre-commit-install
 ```bash
 make pre-commit
 ```
+
+### Тестирование адаптера
+
+Запуск набора тестов адаптера Moonraker в изоляции (без физического принтера):
+
+```bash
+PYTHONPATH="" uv run pytest -v -m "not live" services/printer-exporter/tests/test_moonraker_adapter.py
+```
+
+*Проверяются сценарии:*
+
+- Успешный сбор телеметрии (температуры сопла/стола, статус печати, расчет времени).
+- Обработка таймаута сети (`timeout`).
+- Ошибки сервера Moonraker (HTTP 500 / 5xx).
+- Невалидный или повреждённый JSON.
+- Аварийное состояние Klippy (`shutdown` / `disconnected`).

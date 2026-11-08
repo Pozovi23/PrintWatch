@@ -29,7 +29,7 @@ build: ## Собрать / пересобрать образы exporter и camer
 add-printer: ## Перезапустить экспортёр и применить добавленные в printers.yaml принтеры
 	@echo "==> Обновление конфигурации N принтеров..."
 	docker compose restart printer-exporter camera-proxy
-	@echo "✓ Экспортёр и прокси камер перезапущены с обновлённым списком принтеров!"
+	@echo "Экспортёр и прокси камер перезапущены с обновлённым списком принтеров!"
 
 vpn-bypass-docker: ## Добавить маршруты и ip rule для обхода VPN (LAN 192.168.0.0/16 и Docker 172.16.0.0/12)
 	@echo "==> Запуск скрипта обхода VPN для Docker и локальной сети..."
@@ -54,14 +54,14 @@ lock: ## Обновить файл блокировки uv.lock
 	uv lock
 
 reload-prometheus: ## Перезагрузить правила и конфигурацию Prometheus без перезапуска контейнера
-	curl -s -X POST http://localhost:9090/-/reload && echo "✓ Prometheus config reloaded"
+	curl -s -X POST http://localhost:9090/-/reload && echo "Prometheus config reloaded"
 
 pre-commit-install: ## Установить pre-commit через uv и зарегистрировать git-хуки в репозитории
 	@echo "==> Установка pre-commit через uv..."
 	@uv tool install --upgrade pre-commit
 	@echo "==> Регистрация git-хуков в локальном репозитории (pre-commit, commit-msg, pre-push)..."
 	@uv tool run pre-commit install --install-hooks -t pre-commit -t commit-msg -t pre-push
-	@echo "✓ Pre-commit успешно установлен и активирован!"
+	@echo "Pre-commit успешно установлен и активирован!"
 
 pre-commit: ## Запустить ВСЕ проверки pre-commit по всем файлам проекта
 	@echo "==> Запуск ВСЕХ проверок pre-commit..."

@@ -19,8 +19,8 @@ receivers:
         send_resolved: true
         parse_mode: HTML
         message: >-
-          {{ if eq .Status "firing" }}🔥 <b>ВНИМАНИЕ:
-          {{ .CommonAnnotations.summary }}</b>{{ else }}✅ <b>ВОССТАНОВЛЕНО:
+          {{ if eq .Status "firing" }}<b>ВНИМАНИЕ:
+          {{ .CommonAnnotations.summary }}</b>{{ else }}<b>ВОССТАНОВЛЕНО:
           {{ .CommonAnnotations.summary }}</b>{{ end }}
           <b>Критичность:</b> <code>{{ .CommonLabels.severity }}</code>
           {{ if .CommonLabels.printer }}<b>Принтер:</b> <code>{{ .CommonLabels.printer }}</code>{{

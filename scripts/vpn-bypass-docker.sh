@@ -30,7 +30,7 @@ PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 YAML_FILE="${PROJECT_ROOT}/config/printers.yaml"
 
 if [ ! -f "$YAML_FILE" ]; then
-    echo -e "${RED}❌ Ошибка: Файл конфигурации ${YAML_FILE} не найден!${NC}" >&2
+    echo -e "${RED}Ошибка: Файл конфигурации ${YAML_FILE} не найден!${NC}" >&2
     echo -e "${YELLOW}   Создайте его на основе примера:${NC}" >&2
     echo -e "   cp config/printers.yaml.example config/printers.yaml" >&2
     exit 1
@@ -45,7 +45,7 @@ add_ip_rule_if_missing() {
     local target="$1"
     local prio="$2"
     if ip rule show | grep -E "to ${target}(/32)?.*lookup main" > /dev/null 2>&1; then
-        echo -e "  ${GREEN}✓${NC} Правило для ${target} уже существует"
+        echo -e "  ${GREEN}[OK]${NC} Правило для ${target} уже существует"
     else
         echo -e "  ${YELLOW}+${NC} Добавление: ip rule add to ${target} lookup main priority ${prio}"
         ip rule add to "${target}" lookup main priority "${prio}"
@@ -87,7 +87,7 @@ if [ -f "$YAML_FILE" ]; then
 fi
 
 if [ ${#PRINTERS_MAP[@]} -eq 0 ]; then
-    echo -e "${RED}❌ Ошибка: В ${YAML_FILE} не найдено ни одного принтера с указанным host!${NC}" >&2
+    echo -e "${RED}Ошибка: В ${YAML_FILE} не найдено ни одного принтера с указанным host!${NC}" >&2
     exit 1
 fi
 
@@ -134,20 +134,20 @@ for name in "${!PRINTERS_MAP[@]}"; do
     route_out=$(ip route get "$target_ip" 2>&1 || true)
 
     if echo "$route_out" | grep -q "dev tun"; then
-        echo -e "  ${RED}✗ [${name}] ${target_ip}${NC} -> ${route_out}"
+        echo -e "  ${RED}[FAIL] [${name}] ${target_ip}${NC} -> ${route_out}"
         echo -e "    ${RED}ОШИБКА: Трафик идёт в VPN-туннель (tun)!${NC}"
         ALL_OK=false
     else
         dev_name=$(echo "$route_out" | grep -oE 'dev [^ ]+' | awk '{print $2}' || echo "lan")
-        echo -e "  ${GREEN}✓ [${name}] ${target_ip}${NC} -> идёт напрямую через интерфейс ${GREEN}${dev_name}${NC}"
+        echo -e "  ${GREEN}[OK] [${name}] ${target_ip}${NC} -> идёт напрямую через интерфейс ${GREEN}${dev_name}${NC}"
     fi
 done
 
 echo -e "\n${BLUE}======================================================================${NC}"
 if [ "$ALL_OK" = true ]; then
-    echo -e "${GREEN}✓ ВСЕ ПРИНТЕРЫ ИЗ PRINTERS.YAML ДОСТУПНЫ НАПРЯМУЮ В ОБХОД VPN!${NC}"
+    echo -e "${GREEN}[OK] ВСЕ ПРИНТЕРЫ ИЗ PRINTERS.YAML ДОСТУПНЫ НАПРЯМУЮ В ОБХОД VPN!${NC}"
 else
-    echo -e "${RED}⚠️  ВНИМАНИЕ: Некоторые принтеры всё ещё перехватываются VPN!${NC}"
+    echo -e "${RED}ВНИМАНИЕ: Некоторые принтеры всё ещё перехватываются VPN!${NC}"
     echo -e "${YELLOW}Рекомендация: проверьте настройки Hiddify/Happ (Bypass LAN / Direct).${NC}"
 fi
 echo -e "${BLUE}======================================================================${NC}"

@@ -30,12 +30,17 @@ jobs:
             }}
           restore-keys: |
             pre-commit-${{ runner.os }}-
-      - name: Install hadolint
+      - name: Install linter binaries (hadolint, shfmt, shellcheck)
         run: |
           sudo curl -fsSL --retry 5 --retry-delay 2 --retry-connrefused \
             -o /usr/local/bin/hadolint \
             https://github.com/hadolint/hadolint/releases/download/v2.12.0/hadolint-Linux-x86_64
           sudo chmod +x /usr/local/bin/hadolint
+          sudo curl -fsSL --retry 5 --retry-delay 2 --retry-connrefused \
+            -o /usr/local/bin/shfmt \
+            https://github.com/mvdan/sh/releases/download/v3.10.0/shfmt_v3.10.0_linux_amd64
+          sudo chmod +x /usr/local/bin/shfmt
+          which shellcheck || (sudo apt-get update -y && sudo apt-get install -y shellcheck)
       - name: Run all pre-commit hooks via Make
         run: make pre-commit
 

@@ -84,3 +84,28 @@ PYTHONPATH="" uv run pytest -v -m "not live" services/printer-exporter/tests
 ```bash
 make test-live
 ```
+
+### Тестирование прокси веб-камер (Camera Proxy)
+
+Локальный запуск сервиса трансляции видеопотоков:
+
+```bash
+uv run uvicorn app:app --app-dir services/camera-proxy --port 8080
+```
+
+*Проверка эндпоинтов:*
+
+- **Проверка здоровья (Healthcheck):**
+  ```bash
+  curl http://localhost:8080/healthz
+  ```
+- **Список обнаруженных камер (из `config/printers.yaml`):**
+  ```bash
+  curl http://localhost:8080/camera/list
+  ```
+- **Прямой JPEG-снапшот с камеры принтера:**
+  ```bash
+  curl -I http://localhost:8080/camera/snapshot/printer-1
+  ```
+- **Веб-витрина со стримами в реальном времени:**
+  Открыть в браузере `http://localhost:8080/camera` для просмотра живого MJPEG-видеопотока.

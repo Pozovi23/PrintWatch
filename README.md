@@ -57,18 +57,30 @@ make pre-commit-install
 make pre-commit
 ```
 
-### Тестирование адаптера
+### Тестирование экспортёра
 
-Запуск набора тестов адаптера Moonraker в изоляции (без физического принтера):
+#### Модульные тесты (Unit tests с моками)
+
+Запуск набора тестов в изоляции (без физического принтера):
 
 ```bash
-PYTHONPATH="" uv run pytest -v -m "not live" services/printer-exporter/tests/test_moonraker_adapter.py
+make test
+# или напрямую:
+PYTHONPATH="" uv run pytest -v -m "not live" services/printer-exporter/tests
 ```
 
 *Проверяются сценарии:*
 
-- Успешный сбор телеметрии (температуры сопла/стола, статус печати, расчет времени).
-- Обработка таймаута сети (`timeout`).
-- Ошибки сервера Moonraker (HTTP 500 / 5xx).
-- Невалидный или повреждённый JSON.
-- Аварийное состояние Klippy (`shutdown` / `disconnected`).
+- Успешный сбор телеметрии Moonraker (температуры сопла/стола, статус печати, расчет времени).
+- Обработка сетевого таймаута (`timeout`), ошибок Moonraker (HTTP 500 / 5xx) и повреждённого JSON.
+- Аварийные состояния Klippy (`shutdown` / `disconnected`).
+- Регистрация и корректное обновление метрик Prometheus (`MultiPrinterCollector`).
+- Параллельный сбор телеметрии с N принтеров.
+
+#### Интеграционные тесты живых принтеров
+
+Для проверки подключения к физическому оборудованию из `config/printers.yaml`:
+
+```bash
+make test-live
+```

@@ -8,18 +8,6 @@ pipeline {
     }
 
     stages {
-        stage('Checkout Code') {
-            steps {
-                script {
-                    if (binding.hasVariable('scm') && scm && scm.hasProperty('repositories') && scm.repositories) {
-                        checkout scm
-                    } else {
-                        git branch: 'main', url: 'https://github.com/Pozovi23/PrintWatch.git'
-                    }
-                }
-            }
-        }
-
         stage('Validate Docker Compose') {
             steps {
                 sh '''

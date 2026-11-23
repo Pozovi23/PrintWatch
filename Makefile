@@ -1,4 +1,4 @@
-.PHONY: help up down restart logs status build add-printer vpn-bypass-docker check-printer test test-live test-all sync lock reload-prometheus pre-commit-install pre-commit
+.PHONY: help up down restart logs status build add-printer vpn-bypass-docker check-printer test test-live test-all sync lock reload-prometheus pre-commit-install pre-commit jenkins-up jenkins-down jenkins-logs jenkins-password jenkins-build
 
 SHELL := /bin/bash
 
@@ -66,3 +66,48 @@ pre-commit-install: ## Установить pre-commit через uv и заре
 pre-commit: ## Запустить ВСЕ проверки pre-commit по всем файлам проекта
 	@echo "==> Запуск ВСЕХ проверок pre-commit..."
 	@uv tool run pre-commit run --all-files
+
+jenkins-build: ## Собрать образ Jenkins с Docker CLI (myjenkins-blueocean:2.580.2-1)
+	docker build -t myjenkins-blueocean:2.580.2-1 -f Dockerfile.jenkins .
+
+jenkins-up: ## Запустить связку Jenkins (DinD + Controller на порту 8088)
+	@docker network create jenkins 2>/dev/null || true
+	@docker start jenkins-docker 2>/dev/null || docker run \
+		--name jenkins-docker \
+		--restart unless-stopped \
+		--detach \
+		--privileged \
+		--network jenkins \
+		--network-alias docker \
+		--sysctl net.ipv6.conf.all.disable_ipv6=1 \
+		--env DOCKER_TLS_CERTDIR=/certs \
+		--volume jenkins-docker-certs:/certs/client \
+		--volume jenkins-data:/var/jenkins_home \
+		--publish 2376:2376 \
+		docker:dind \
+		--storage-driver overlay2
+	@docker start jenkins-blueocean 2>/dev/null || docker run \
+		--name jenkins-blueocean \
+		--restart unless-stopped \
+		--detach \
+		--network jenkins \
+		--env DOCKER_HOST=tcp://docker:2376 \
+		--env DOCKER_CERT_PATH=/certs/client \
+		--env DOCKER_TLS_VERIFY=1 \
+		--env JAVA_OPTS="-Djava.net.preferIPv4Stack=true" \
+		--publish 8088:8080 \
+		--publish 50000:50000 \
+		--volume jenkins-data:/var/jenkins_home \
+		--volume jenkins-docker-certs:/certs/client:ro \
+		myjenkins-blueocean:2.580.2-1
+	@echo "==> Jenkins запущен: http://localhost:8088"
+	@echo "==> Для вывода пароля выполните: make jenkins-password"
+
+jenkins-down: ## Остановить контейнеры Jenkins
+	@docker stop jenkins-blueocean jenkins-docker 2>/dev/null || true
+
+jenkins-logs: ## Просмотр логов Jenkins в реальном времени
+	@docker logs -f jenkins-blueocean
+
+jenkins-password: ## Вывести первичный пароль администратора Jenkins
+	@docker exec jenkins-blueocean cat /var/jenkins_home/secrets/initialAdminPassword
